@@ -21,7 +21,9 @@ const undoStack = [];
 // last alphabetize, re-running uses the remembered pre-decoration source,
 // so group headers, numbering, and custom text never compound.
 let srcA = null, outA = null, srcB = null, outB = null;
-function invalidateAlphaCache() { srcA = outA = srcB = outB = null; }
+// Where each item of outA came from (see alphabetizeText and keyRanges).
+let outOriginsA = null;
+function invalidateAlphaCache() { srcA = outA = srcB = outB = outOriginsA = null; }
 
 /* ---------- Screen reader announcements ---------- */
 function announce(text) {
@@ -147,57 +149,157 @@ const TRANSFORMS = {
     .replace(/^-+|-+$/g, '')
 };
 
+/* ---------- Sort from character ---------- */
+const sortFromInput = $('sortFrom');
+
+// 1 means a normal whole-line sort. Anything unparsable or below 1 counts
+// as 1, so a half-typed entry never breaks sorting.
+function sortFromValue() {
+  const n = Math.floor(Number(sortFromInput.value));
+  return n >= 1 ? Math.min(n, 999) : 1;
+}
+
+const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+// Printable ASCII is one character per code unit, so those items skip the
+// segmenter, which keeps long lists fast.
+const PLAIN_ASCII = /^[\t\n -~]*$/;
+
+// Where the nth character of s sits, as [start, end) offsets, or null when
+// s is too short. Characters are grapheme clusters, so an accented letter
+// or an emoji counts once, and leading whitespace is not counted.
+function nthCharRange(s, n) {
+  const lead = s.length - s.trimStart().length;
+  // Every character is at least one code unit, so short items stop here.
+  if (s.length - lead < n) return null;
+  if (PLAIN_ASCII.test(s)) return [lead + n - 1, lead + n];
+  let count = 0;
+  for (const { segment, index } of graphemes.segment(s.slice(lead))) {
+    if (++count === n) return [lead + index, lead + index + segment.length];
+  }
+  return null;
+}
+
+// What a line sorts by when sorting from character n: the rest of the line
+// from that character on, so ties fall to the characters after it.
+function sortKeyFrom(line, n) {
+  const range = nthCharRange(line, n);
+  return range ? line.slice(range[0]) : null;
+}
+
+function sortFromChanged() {
+  sortFromInput.classList.toggle('on', sortFromValue() > 1);
+  renderBackdrop();
+  save();
+}
+
+function stepSortFrom(delta) {
+  const n = Math.min(999, Math.max(1, sortFromValue() + delta));
+  sortFromInput.value = n;
+  sortFromChanged();
+  announce(n > 1 ? `Sorting from character ${n}` : 'Sorting from the start');
+}
+
+$('sortFromDec').addEventListener('click', () => stepSortFrom(-1));
+$('sortFromInc').addEventListener('click', () => stepSortFrom(1));
+sortFromInput.addEventListener('input', sortFromChanged);
+sortFromInput.addEventListener('change', () => {
+  sortFromInput.value = sortFromValue();
+  sortFromChanged();
+});
+// Items are counted per delimiter, so the boxes move when it changes.
+$('delimiter').addEventListener('input', () => renderBackdrop());
+
 /* ---------- Alphabetize ---------- */
 function alphabetizeText(text) {
-  if (text.trim() === '') return text;
+  if (text.trim() === '') return { text, origins: null };
   const delim = $('delimiter').value || '\n';
   const locale = resolveLocale(text) || navigator.language;
+  const from = sortFromValue();
   let lines = text.split(delim);
 
   if ($('swRemoveEmpty').checked) lines = lines.filter(l => l.trim().length > 0);
 
+  // Keys come from the lines as typed, before any transform, so the boxed
+  // character is always the one a line sorts by.
   const transformFn = TRANSFORMS[transformValue];
-  if (transformFn) lines = lines.map(l => transformFn(l, locale));
+  let items = lines.map(src => ({
+    src,
+    l: transformFn ? transformFn(src, locale) : src,
+    key: from > 1 ? sortKeyFrom(src, from) : null
+  }));
 
   const collator = makeCollator(text);
-  lines.sort(collator.compare);
-  if ($('orderDesc').checked) lines.reverse();
+  const desc = $('orderDesc').checked;
+  if (from > 1) {
+    // Lines too short to have the character go last, in either order.
+    const keyed = items.filter(it => it.key !== null)
+      .sort((a, b) => collator.compare(a.key, b.key) || collator.compare(a.l, b.l));
+    const short = items.filter(it => it.key === null)
+      .sort((a, b) => collator.compare(a.l, b.l));
+    if (desc) { keyed.reverse(); short.reverse(); }
+    items = keyed.concat(short);
+  } else {
+    items.sort((a, b) => collator.compare(a.l, b.l));
+    if (desc) items.reverse();
+  }
+  lines = items.map(it => it.l);
 
-  const keys = lines.map(l => {
-    const ch = l.trimStart().charAt(0);
+  // Group headings follow what each line sorts by.
+  const keys = items.map(it => {
+    const ch = (from > 1 ? (it.key ?? '') : it.l.trimStart()).charAt(0);
     return /\p{L}/u.test(ch) ? ch.toLocaleUpperCase(locale) : '#';
   });
 
-  if ($('swNumbering').checked) lines = lines.map((l, i) => `${i + 1}. ${l}`);
-
+  // Where each output line came from, so boxes on freshly sorted text land
+  // on the character it sorted by. skip is what numbering and custom text
+  // add in front, shift is how far Trim moved the line, and a null shift
+  // means a transform rewrote it, so its box can't be placed. Headings are
+  // null.
+  const numbering = $('swNumbering').checked;
   const custom = $('customText').value;
+  const customAtStart = !!custom && !$('posEnd').checked;
+  let origins = items.map(({ src, l }, i) => ({
+    src,
+    skip: (numbering ? String(i + 1).length + 2 : 0) + (customAtStart ? custom.length : 0),
+    shift: l.trim().length === src.trim().length
+      ? (l.length - l.trimStart().length) - (src.length - src.trimStart().length)
+      : null
+  }));
+
+  if (numbering) lines = lines.map((l, i) => `${i + 1}. ${l}`);
+
   if (custom) {
-    lines = $('posEnd').checked ? lines.map(l => `${l}${custom}`) : lines.map(l => `${custom}${l}`);
+    lines = customAtStart ? lines.map(l => `${custom}${l}`) : lines.map(l => `${l}${custom}`);
   }
 
   if ($('swGroupLetter').checked) {
-    const grouped = [];
+    const grouped = [], groupedOrigins = [];
     let prev = null;
     lines.forEach((l, i) => {
-      if (keys[i] !== prev) { grouped.push(keys[i]); prev = keys[i]; }
+      if (keys[i] !== prev) { grouped.push(keys[i]); groupedOrigins.push(null); prev = keys[i]; }
       grouped.push(l);
+      groupedOrigins.push(origins[i]);
     });
     lines = grouped;
+    origins = groupedOrigins;
   }
 
-  return lines.join(delim);
+  return { text: lines.join(delim), origins };
 }
 
 function runAlphabetize() {
   snapshot();
   const inputA = (outA !== null && textA.value === outA) ? srcA : textA.value;
   const inputB = (outB !== null && textB.value === outB) ? srcB : textB.value;
-  textA.value = alphabetizeText(inputA);
+  const resultA = alphabetizeText(inputA);
+  textA.value = resultA.text;
   const doB = compareOn && alphaToggle.checked;
-  if (doB) textB.value = alphabetizeText(inputB);
-  afterTextChange();
+  if (doB) textB.value = alphabetizeText(inputB).text;
+  invalidateAlphaCache();
   srcA = inputA; outA = textA.value;
+  outOriginsA = { delim: $('delimiter').value || '\n', origins: resultA.origins };
   if (doB) { srcB = inputB; outB = textB.value; }
+  afterTextChange({ sorted: true });
   if ($('swAutoCopy').checked) copyResult();
 }
 
@@ -333,21 +435,70 @@ function syncBackdropScroll() {
 }
 textA.addEventListener('scroll', syncBackdropScroll);
 
+// Where the sort-from character sits on every item of the main text box.
+// Freshly sorted text maps each item back to its source line, because
+// numbering, custom text, and transforms can move or rewrite characters,
+// and sorting again starts from that source.
+function keyRanges() {
+  const n = sortFromValue();
+  if (n < 2) return [];
+  const text = textA.value;
+  const delim = $('delimiter').value || '\n';
+  const items = text.split(delim);
+  const fresh = outA !== null && text === outA && outOriginsA?.delim === delim
+    && outOriginsA.origins?.length === items.length ? outOriginsA.origins : null;
+  const ranges = [];
+  for (let i = 0, pos = 0; i < items.length && ranges.length < 5000; i++) {
+    const r = fresh ? originRange(fresh[i], n) : nthCharRange(items[i], n);
+    if (r) ranges.push({ start: pos + r[0], end: pos + r[1] });
+    pos += items[i].length + delim.length;
+  }
+  return ranges;
+}
+
+// Where the sort-from character landed in a freshly sorted item, or null
+// for a heading or a line a transform rewrote.
+function originRange(origin, n) {
+  if (!origin || origin.shift === null) return null;
+  const r = nthCharRange(origin.src, n);
+  const offset = origin.skip + origin.shift;
+  return r && [r[0] + offset, r[1] + offset];
+}
+
 function renderBackdrop() {
   backdropA.replaceChildren();
-  if (!findMatches.length) return;
+  const keys = keyRanges();
+  if (!findMatches.length && !keys.length) return;
   const text = textA.value;
   const frag = document.createDocumentFragment();
+  let k = 0;
+  // Appends text[from, to) to parent, boxing the sort-from characters in it.
+  // A box that would straddle the edge of a match is skipped.
+  const append = (parent, from, to) => {
+    let pos = from;
+    while (k < keys.length && keys[k].end <= to) {
+      const { start, end } = keys[k++];
+      if (start < pos) continue;
+      if (start > pos) parent.appendChild(document.createTextNode(text.slice(pos, start)));
+      const box = document.createElement('span');
+      box.className = 'key';
+      box.textContent = text.slice(start, end);
+      parent.appendChild(box);
+      pos = end;
+    }
+    if (to > pos) parent.appendChild(document.createTextNode(text.slice(pos, to)));
+  };
   let pos = 0;
   findMatches.forEach((mt, i) => {
-    if (mt.start > pos) frag.appendChild(document.createTextNode(text.slice(pos, mt.start)));
+    append(frag, pos, mt.start);
     const mark = document.createElement('mark');
-    mark.textContent = text.slice(mt.start, mt.end);
     if (i === currentMatch) mark.className = 'current';
+    append(mark, mt.start, mt.end);
     frag.appendChild(mark);
     pos = mt.end;
   });
-  frag.appendChild(document.createTextNode(text.slice(pos) + '\n'));
+  append(frag, pos, text.length);
+  frag.appendChild(document.createTextNode('\n'));
   backdropA.appendChild(frag);
   // Compensate for the textarea scrollbar so line wrapping stays identical.
   backdropA.style.right = `${textA.offsetWidth - textA.clientWidth - 2}px`;
@@ -519,6 +670,7 @@ $('dedupeBtn').addEventListener('click', () => {
   textA.value = kept.join(delim);
   invalidateAlphaCache();
   updateCounter();
+  updateFindHighlights(true);
   save();
 
   const msg = `${total} duplicate${total === 1 ? '' : 's'} removed`;
@@ -688,7 +840,7 @@ const hasChromeStorage = typeof chrome !== 'undefined' && !!chrome.storage;
 const controlIds = ['swIgnoreCase', 'swSortNumber', 'swRemoveEmpty', 'swNumbering',
   'swRemember', 'swAutoCopy', 'swRegex', 'swMatchCase', 'swWholeWord', 'swGroupLetter',
   'orderAsc', 'orderDesc', 'posStart', 'posEnd', 'alphaToggle'];
-const textIds = ['customText', 'delimiter', 'findInput', 'replaceInput'];
+const textIds = ['customText', 'delimiter', 'findInput', 'replaceInput', 'sortFrom'];
 
 function fbRead() {
   try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch { return {}; }
@@ -782,16 +934,20 @@ function applyState(settings, textState) {
   advancedOpen = !!settings.advancedOpen;
   compareOn = !!settings.compareOn;
   swCompare.checked = compareOn;
+  sortFromInput.value = sortFromValue();
+  sortFromInput.classList.toggle('on', sortFromValue() > 1);
 }
 
-function afterTextChange() {
+// sorted: the text came straight from Alphabetize, so keep the
+// re-alphabetize cache it just set.
+function afterTextChange({ sorted = false } = {}) {
   updateCounter();
   save();
   hideDedupe();
-  invalidateAlphaCache();
+  if (!sorted) invalidateAlphaCache();
   updateFindHighlights(true);
 }
-textA.addEventListener('input', afterTextChange);
+textA.addEventListener('input', () => afterTextChange());
 textB.addEventListener('input', () => { save(); srcB = outB = null; });
 [...controlIds, ...textIds].forEach(id => {
   $(id).addEventListener('change', save);

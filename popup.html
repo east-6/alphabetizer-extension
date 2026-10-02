@@ -91,6 +91,24 @@
 
       <div class="row">
         <span class="label-group">
+          <span class="row-label" id="sortFromLabel">Sort from character</span>
+          <span class="help" tabindex="0" aria-label="What does Sort from character do?" aria-describedby="tip-sortfrom">?
+            <span class="tip" id="tip-sortfrom">Sorts each line starting at this character and boxes it in your text, so at <code>5</code>, <code>Dr. Smith</code> sorts by <code>Smith</code>. At 1 it sorts normally.</span>
+          </span>
+        </span>
+        <span class="stepper">
+          <button class="icon-mini" id="sortFromDec" title="Earlier character" aria-label="Sort from an earlier character">
+            <svg viewBox="0 0 14 14" fill="none" stroke-width="2" stroke-linecap="round"><path d="M3 7h8"/></svg>
+          </button>
+          <input type="number" class="step-input" id="sortFrom" min="1" max="999" step="1" value="1" aria-labelledby="sortFromLabel" aria-describedby="tip-sortfrom">
+          <button class="icon-mini" id="sortFromInc" title="Later character" aria-label="Sort from a later character">
+            <svg viewBox="0 0 14 14" fill="none" stroke-width="2" stroke-linecap="round"><path d="M3 7h8M7 3v8"/></svg>
+          </button>
+        </span>
+      </div>
+
+      <div class="row">
+        <span class="label-group">
           <span class="row-label" id="ignoreCaseLabel">Ignore case</span>
           <span class="help" tabindex="0" aria-label="What does Ignore case do?" aria-describedby="tip-ignorecase">?
             <span class="tip" id="tip-ignorecase">Treats uppercase and lowercase letters as the same while sorting, so <code>banana</code> and <code>Banana</code> sort together.</span>
@@ -324,6 +342,7 @@
           <li>Pick A to Z or Z to A, and turn on <strong>Ignore case</strong>, <strong>Sort by number</strong> (puts item2 before item10), or <strong>Remove empty lines</strong>.</li>
           <li>Click <strong>Alphabetize</strong> again. Re-sorting with new settings is always safe.</li>
         </ol>
+        <p>To sort by a later part of each line, raise <strong>Sort from character</strong>. At 5, <code>Dr. Smith</code> sorts by <code>Smith</code>, and the character each line sorts by gets a box in your text.</p>
 
         <div class="group-title">Remove duplicate lines</div>
         <ol>
