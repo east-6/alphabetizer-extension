@@ -1,16 +1,26 @@
 {
-    "manifest_version": 3,
-    "name": "Alphabetizer",
-    "version": "1.0",
-    "description": "A simple extension to alphabetize text line by line.",
-    "icons": {
-      "48": "icon48.png",
-      "128": "icon128.png"
-    },
-    "action": {
-      "default_icon": "icon48.png",
-      "default_popup": "popup.html"
-    },
-    "permissions": []
+  "manifest_version": 3,
+  "name": "Alphabetizer",
+  "version": "2.1",
+  "description": "Sort text lines instantly with language-aware alphabetizing, dedupe, find and replace, and compare.",
+  "icons": {
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "action": {
+    "default_icon": "icon48.png",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": ["storage", "contextMenus", "scripting", "activeTab"],
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+L"
+      },
+      "description": "Open Alphabetizer"
+    }
   }
-  
+}
