@@ -811,9 +811,9 @@ helpModal.addEventListener('click', e => { if (e.target === helpModal) setHelpOp
 // One-time Whop checkout links, one per amount. Changing a link is a
 // one-line edit here, and forks can point these at their own.
 const SUPPORT_LINKS = {
-  2: 'https://whop.com/checkout/REPLACE-WITH-2-DOLLAR-LINK/',
-  5: 'https://whop.com/checkout/REPLACE-WITH-5-DOLLAR-LINK/',
-  10: 'https://whop.com/checkout/REPLACE-WITH-10-DOLLAR-LINK/'
+  2: 'https://whop.com/checkout/ch_XAGoYJwurD7k0wJ/',
+  5: 'https://whop.com/checkout/ch_2bc73z7VETN5gQ4/',
+  10: 'https://whop.com/checkout/ch_nOTUG4KST0xJ9bC/'
 };
 
 const supportWrap = $('supportWrap'), supportBtn = $('supportBtn');
