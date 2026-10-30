@@ -1,144 +1,728 @@
-/* Set box-sizing, margin, and padding to 0 for all elements */
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  color-scheme: light dark;
+  --bg: #F1F1F1;
+  --surface: #FFFFFF;
+  --surface2: #F6F6F7;
+  --text: #151515;
+  --text-2: #6F6F6F;
+  --placeholder: #A0A0A4;
+  --accent: #A6CF6B;
+  --accent-hover: #97C25A;
+  --accent-ink: #618E2C;
+  --on-accent: #1F2E10;
+  --accent-soft: rgba(166, 207, 107, 0.18);
+  --accent-soft-hover: rgba(166, 207, 107, 0.30);
+  --border: rgba(0, 0, 0, 0.10);
+  --border-soft: rgba(0, 0, 0, 0.06);
+  --track: rgba(0, 0, 0, 0.08);
+  --knob-track: rgba(0, 0, 0, 0.16);
+  --soft: rgba(0, 0, 0, 0.055);
+  --soft-hover: rgba(0, 0, 0, 0.09);
+  --focus-ring: rgba(166, 207, 107, 0.5);
+  --float: #FFF5EF;
+  --tip-bg: #1C1C1E;
+  --tip-text: #F5F5F7;
+  --diff-del-bg: #FFEBE9;
+  --diff-add-bg: #E6FFEC;
+  --diff-del-chip: #FFB3AD;
+  --diff-add-chip: #ABF2BC;
+  --diff-del-text: #CF222E;
+  --diff-add-text: #1A7F37;
 }
 
-/* Style the body element */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1D1D1F;
+    --surface: #29292C;
+    --surface2: #232326;
+    --text: #F5F5F7;
+    --text-2: #A0A0A6;
+    --placeholder: #6C6C72;
+    --border: rgba(255, 255, 255, 0.14);
+    --border-soft: rgba(255, 255, 255, 0.08);
+    --track: rgba(255, 255, 255, 0.12);
+    --knob-track: rgba(255, 255, 255, 0.2);
+    --soft: rgba(255, 255, 255, 0.08);
+    --soft-hover: rgba(255, 255, 255, 0.13);
+    --accent-ink: #A6CF6B;
+    --float: #3D3D45;
+    --tip-bg: #4E4E56;
+    --diff-del-bg: rgba(248, 81, 73, 0.16);
+    --diff-add-bg: rgba(63, 185, 80, 0.16);
+    --diff-del-chip: rgba(248, 81, 73, 0.4);
+    --diff-add-chip: rgba(63, 185, 80, 0.4);
+    --diff-del-text: #F85149;
+    --diff-add-text: #3FB950;
+  }
+}
+
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Set the font family */
-    width: 350px; /* Set the width of the body element */
-    padding: 1rem; /* Set padding around the body element */
-    display: flex; /* Use flexbox for the body element */
-    flex-direction: column; /* Set the direction of the flexbox to column */
-    gap: 1rem; /* Set the gap between child elements of the flexbox */
-    background-color: #f5f5f5; /* Set the background color of the body element */
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  width: 350px;
+  background: var(--bg);
+  color: var(--text);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
+body.advanced-open { width: 700px; }
+body.compare-on { width: 780px; }
 
-/* Style the h1 element */
-h1 {
-    font-size: 24px; /* Set the font size of the h1 element */
-    font-weight: bold; /* Set the font weight of the h1 element */
-    color: #333; /* Set the color of the h1 element */
-    margin-bottom: 1rem; /* Set the margin bottom of the h1 element */
+h1 { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+.counter { font-size: 12px; color: var(--text-2); margin-top: 4px; }
+
+.popup-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.title-row { display: flex; align-items: center; gap: 8px; }
+#helpBtn { font-family: inherit; font-size: 12px; font-weight: 600; color: var(--text-2); }
+
+/* ---------- Help modal ---------- */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
 }
-
-/* Style the inputText element */
-#inputText {
-    width: 100%; /* Set the width of the inputText element */
-    padding: 0.5rem; /* Set padding for the inputText element */
-    font-size: 14px; /* Set the font size of the inputText element */
-    line-height: 1.5; /* Set the line height of the inputText element */
-    border: 1px solid #ccc; /* Set the border of the inputText element */
-    border-radius: 5px; /* Set the border radius of the inputText element */
-    resize: vertical; /* Allow the inputText element to be resized vertically */
-    min-height: 150px; /* Set the minimum height of the inputText element */
+.modal-card {
+  background: var(--float);
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  width: 100%;
+  max-width: 460px;
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
-
-/* Style the alphabetizeButton element */
-#alphabetizeButton {
-    display: inline-block; /* Set the display of the alphabetizeButton element to inline-block */
-    background-color: #007bff; /* Set the background color of the alphabetizeButton element */
-    color: #fff; /* Set the color of the alphabetizeButton element */
-    border: none; /* Remove the border of the alphabetizeButton element */
-    font-size: 14px; /* Set the font size of the alphabetizeButton element */
-    padding: 0.5rem 1rem; /* Set padding for the alphabetizeButton element */
-    border-radius: 5px; /* Set the border radius of the alphabetizeButton element */
-    cursor: pointer; /* Change the cursor to a pointer on hover */
-    text-align: center; /* Center the text of the alphabetizeButton element */
-    text-decoration: none; /* Remove the text decoration of the alphabetizeButton element */
-    transition: background-color 0.2s; /* Add a transition effect to the background color */
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-soft);
+  flex-shrink: 0;
 }
-
-/* Change the background color of the alphabetizeButton element on hover */
-#alphabetizeButton:hover {
-    background-color: #0056b3;
+.modal-title { font-size: 13px; font-weight: 600; }
+.modal-body { padding: 2px 14px 14px; overflow-y: auto; }
+.modal-body p { font-size: 12.5px; line-height: 1.55; color: var(--text); margin-bottom: 8px; }
+.modal-body ol { font-size: 12.5px; line-height: 1.55; color: var(--text); margin: 0 0 8px; padding-left: 20px; }
+.modal-body li { margin-bottom: 3px; }
+.modal-body strong { font-weight: 600; }
+.modal-body code {
+  font-family: Consolas, "SF Mono", Menlo, monospace;
+  font-size: 11px;
+  background: var(--soft);
+  padding: 0 4px;
+  border-radius: 4px;
 }
+.head-controls { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.head-toggle { display: none; align-items: center; gap: 7px; }
+body.compare-on .head-toggle { display: flex; }
+.head-toggle .head-label { font-size: 12px; font-weight: 500; color: var(--text-2); }
+#exitCompareBtn { display: none; }
+body.compare-on #exitCompareBtn { display: inline-flex; }
 
-/* Style the infoText element */
-#infoText {
-    font-size: 14px; /* Set the font size of the infoText element */
-    color: #888; /* Set the color of the infoText element */
-    margin-top: -0.5rem; /* Set a negative margin top for the infoText element */
-    margin-bottom: 1rem; /* Set the margin bottom of the infoText element */
+.icon-mini {
+  width: 26px; height: 26px;
+  border: none;
+  border-radius: 6px;
+  background: var(--soft);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
+.icon-mini:hover:not(:disabled) { background: var(--soft-hover); }
+.icon-mini:disabled { opacity: 0.35; cursor: default; }
+.icon-mini svg { width: 13px; height: 13px; stroke: var(--text-2); }
+.icon-mini.ok svg { stroke: var(--diff-add-text); }
 
-/* Style label elements */
-label {
-    display: block; /* Set the display of label elements to block */
-    font-size: 14px; /* Set the font size of label elements */
-    margin: 0.5rem 0 0.25rem; /* Set the margin of label elements */
-    color: #444; /* Set the color of label elements */
+/* ---------- Text areas ---------- */
+.compare-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+body.compare-on .compare-grid { grid-template-columns: 1fr 1fr; }
+.ta-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #8A8A8E;
+  margin-bottom: 4px;
+  display: none;
 }
+body.compare-on .ta-label { display: block; }
+#sideB { display: none; }
+body.compare-on #sideB { display: block; }
 
-/* Style text input and select elements */
-input[type="text"],
-select {
-    display: block; /* Set the display of text input and select elements to block */
-    width: 100%; /* Set the width of text input and select elements */
-    padding: 0.25rem; /* Set padding for text input and select elements */
-    font-size: 14px; /* Set the font size of text input and select elements */
-    border: 1px solid #ccc; /* Set the border of text input and select elements */
-    border-radius: 4px; /* Set the border radius of text input and select elements */
-    box-sizing: border-box; /* Include border and padding in the element's total width and height */
-    margin-bottom: 1rem; /* Set the margin bottom of text input and select elements */
+.ta-wrap {
+  position: relative;
+  background: var(--surface);
+  border-radius: 8px;
 }
-
-/* Style checkbox elements */
-input[type="checkbox"] {
-    margin-right: 0.5rem; /* Set the margin right of checkbox elements */
-    vertical-align: middle; /* Align checkbox elements vertically in the middle */
+.ta-wrap textarea {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+  display: block;
 }
+.ta-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  color: transparent;
+}
+.ta-backdrop mark {
+  background: rgba(166, 207, 107, 0.35);
+  color: transparent;
+  border-radius: 2px;
+}
+.ta-backdrop mark.current {
+  background: rgba(166, 207, 107, 0.7);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+/* The Sort from character box: an outline, so it never reads as a match */
+.ta-backdrop .key {
+  background: var(--accent-soft);
+  border-radius: 3px;
+  outline: 1.5px solid var(--accent-ink);
+}
+/* Green on a green match would vanish, so a box inside one uses text color */
+.ta-backdrop mark .key { outline-color: var(--text); }
 
-/* Style textarea elements */
 textarea {
-    width: 100%; /* Set the width of textarea elements */
-    min-height: 200px; /* Set the minimum height of textarea elements */
-    padding: 0.5rem; /* Set padding for textarea elements */
-    font-family: inherit; /* Inherit the font family of the parent element */
-    font-size: 16px; /* Set the font size of textarea elements */
-    border: 1px solid #ccc; /* Set the border of textarea elements */
-    border-radius: 4px; /* Set the border radius of textarea elements */
-    box-sizing: border-box; /* Include border and padding in the element's total width and height */
-    margin-bottom: 1rem; /* Set the margin bottom of textarea elements */
+  font-family: inherit;
+  width: 100%;
+  min-height: 150px;
+  resize: vertical;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.04);
+  outline: none;
+}
+textarea::placeholder { color: var(--placeholder); }
+textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus-ring); }
+
+/* ---------- Buttons ---------- */
+.button-row { display: flex; gap: 8px; }
+
+.btn {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  height: 36px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 14px;
+  transition: background 0.12s ease, box-shadow 0.12s ease;
+  color: var(--text);
+}
+.btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--focus-ring); }
+
+.btn-primary {
+  flex: 1;
+  color: var(--on-accent);
+  background: var(--accent);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 1px 2px rgba(0,0,0,0.12);
+}
+.btn-primary:hover { background: var(--accent-hover); }
+
+.btn-soft { background: var(--soft); }
+.btn-soft:hover { background: var(--soft-hover); }
+.btn-soft svg { width: 14px; height: 14px; stroke: var(--text-2); }
+.btn-soft.active, .btn-narrow.active { box-shadow: inset 0 0 0 1.5px var(--accent); }
+
+.btn-narrow { padding: 0 11px; background: var(--soft); }
+.btn-narrow:hover { background: var(--soft-hover); }
+.btn-narrow svg { width: 15px; height: 15px; stroke: var(--text-2); }
+
+.btn-mini {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  height: 28px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+  color: var(--text);
+  background: var(--soft);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.btn-mini:hover { background: var(--soft-hover); }
+.btn-mini svg { width: 12px; height: 12px; stroke: var(--text-2); }
+
+.btn-mini.accent { color: var(--accent-ink); background: var(--accent-soft); }
+.btn-mini.accent:hover { background: var(--accent-soft-hover); }
+.btn-mini.wide { width: 100%; height: 30px; }
+
+/* Row action buttons share one width so stacked rows align on both edges */
+.adv-body > .row > .btn-mini,
+.dedupe-actions .btn-mini { min-width: 84px; }
+
+/* ---------- Settings panels ---------- */
+.settings-cols { display: none; grid-template-columns: 1fr; gap: 12px; align-items: start; }
+body.settings-open .settings-cols { display: grid; }
+body.advanced-open .settings-cols { grid-template-columns: 1fr 1fr; }
+#advPanel { display: none; }
+body.advanced-open #advPanel { display: block; }
+
+.settings {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  padding: 4px 14px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
 }
 
-/* Style button elements */
-button {
-    display: block; /* Set the display of button elements to block */
-    width: 100%; /* Set the width of button elements */
-    padding: 0.5rem; /* Set padding for button elements */
-    font-size: 16px; /* Set the font size of button elements */
-    font-weight: bold; /* Set the font weight of button elements */
-    color: #fff; /* Set the color of button elements */
-    background-color: #3a7bdb; /* Set the background color of button elements */
-    border: none; /* Remove the border of button elements */
-    border-radius: 4px; /* Set the border radius of button elements */
-    cursor: pointer; /* Change the cursor to a pointer */
+.group-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8A8A8E;
+  padding: 12px 0 4px;
 }
 
-/* Change the background color of button elements on hover */
-button:hover {
-    background-color: #2e62a8;
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  /* Content-based height with equal padding, so switches, buttons, and
+     inputs all get the same breathing room above and below. */
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+.row:last-child, .row.no-divider { border-bottom: none; }
+.row-label { font-size: 13px; color: var(--text); }
+.label-group { display: flex; align-items: center; gap: 6px; }
+
+.row-stack { padding-bottom: 10px; border-bottom: 1px solid var(--border-soft); }
+.row-stack .row { border-bottom: none; }
+
+/* No flex gap between rows: the divider is each row's bottom border, so
+   spacing must come from symmetric row padding or the divider sits off
+   center between rows. */
+.adv-body { display: flex; flex-direction: column; padding-bottom: 12px; }
+.adv-body > .sub-card { margin-bottom: 8px; }
+
+.sub-card {
+  background: var(--surface2);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sub-card-title { font-size: 12px; font-weight: 600; color: var(--text); }
+.sub-card .row { padding: 4px 0; border-bottom: none; }
+
+/* ---------- Help bubble + tooltip ---------- */
+.help {
+  position: relative;
+  width: 15px; height: 15px;
+  border-radius: 50%;
+  background: var(--soft);
+  color: var(--text-2);
+  font-size: 10px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+  flex-shrink: 0;
+}
+.help:hover, .help:focus-visible { background: var(--soft-hover); color: var(--text); outline: none; }
+
+.help .tip {
+  position: absolute;
+  bottom: calc(100% + 7px);
+  left: -10px;
+  width: 195px;
+  background: var(--tip-bg);
+  color: var(--tip-text);
+  font-size: 11.5px;
+  font-weight: 400;
+  line-height: 1.45;
+  padding: 7px 10px;
+  border-radius: 7px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.12s ease, visibility 0.12s ease;
+  z-index: 20;
+}
+.help .tip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 13px;
+  border: 5px solid transparent;
+  border-top-color: var(--tip-bg);
+}
+.help:hover .tip, .help:focus-visible .tip { opacity: 1; visibility: visible; }
+
+.tip code {
+  font-family: Consolas, "SF Mono", Menlo, monospace;
+  font-size: 10.5px;
+  background: rgba(255,255,255,0.16);
+  padding: 0 4px;
+  border-radius: 4px;
 }
 
-/* Style the settingsButton element */
-button#settingsButton {
-    background-color: #ccc; /* Set the background color of the settingsButton element */
+/* ---------- Segmented control ---------- */
+.segmented {
+  display: inline-flex;
+  background: var(--track);
+  border-radius: 8px;
+  padding: 2px;
 }
- 
-/* Change the background color of the settingsButton element on hover */
-button#settingsButton:hover {
-    background-color: #999;
+.segmented input { position: absolute; opacity: 0; pointer-events: none; }
+.segmented label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: color 0.12s ease;
+}
+.segmented input:checked + label {
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(0,0,0,0.04);
+}
+.segmented input:focus-visible + label { box-shadow: 0 0 0 3px var(--focus-ring); }
+
+/* ---------- Stepper ---------- */
+.stepper { display: inline-flex; align-items: center; gap: 4px; }
+.step-input {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  width: 38px;
+  height: 26px;
+  text-align: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  outline: none;
+  appearance: textfield;
+}
+.step-input::-webkit-inner-spin-button,
+.step-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.step-input:hover { background: var(--soft); }
+.step-input:focus { background: var(--surface); border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus-ring); }
+.step-input.on { color: var(--accent-ink); }
+
+/* ---------- Switch ---------- */
+.switch { position: relative; display: inline-block; width: 34px; height: 20px; flex-shrink: 0; }
+.switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.switch .knob {
+  position: absolute; inset: 0;
+  background: var(--knob-track);
+  border-radius: 999px;
+  transition: background 0.15s ease;
+  pointer-events: none;
+}
+.switch .knob::after {
+  content: "";
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 16px; height: 16px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+  transition: transform 0.15s ease;
+}
+.switch input:checked ~ .knob { background: var(--accent); }
+.switch input:checked ~ .knob::after { transform: translateX(14px); }
+.switch input:focus-visible ~ .knob { box-shadow: 0 0 0 3px var(--focus-ring); }
+
+/* ---------- Custom dropdown ---------- */
+.dropdown { position: relative; }
+.dd-trigger {
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--text);
+  height: 30px;
+  min-width: 118px;
+  padding: 0 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.dd-trigger:hover { background: var(--surface2); }
+.dd-trigger:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus-ring); }
+.dd-trigger svg { width: 10px; height: 6px; stroke: var(--text-2); flex-shrink: 0; }
+.dropdown.open .dd-trigger { border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus-ring); }
+
+.dd-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 150px;
+  max-height: 244px;
+  overflow-y: auto;
+  background: var(--float);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.14), 0 2px 6px rgba(0,0,0,0.08);
+  padding: 4px;
+  z-index: 10;
+  display: none;
+}
+.dropdown.open .dd-menu { display: block; }
+
+.dd-item {
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--text);
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  padding: 7px 8px 7px 26px;
+  cursor: pointer;
+  position: relative;
+  display: block;
+}
+.dd-item:hover { background: var(--soft); }
+.dd-item[aria-selected="true"]::before {
+  content: "";
+  position: absolute;
+  left: 8px; top: 50%;
+  width: 9px; height: 5px;
+  border-left: 2px solid var(--accent-ink);
+  border-bottom: 2px solid var(--accent-ink);
+  transform: translateY(-70%) rotate(-45deg);
 }
 
-/* Style the settingsContainer element */
-#settingsContainer {
-    margin-top: 1rem; /* Set the margin top of the settingsContainer element */
+/* ---------- Text inputs ---------- */
+.text-input {
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--text);
+  height: 30px;
+  padding: 0 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  outline: none;
+}
+.text-input::placeholder { color: var(--placeholder); }
+.text-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus-ring); }
+.text-input.full { width: 100%; }
+.text-input.short { width: 90px; text-align: center; }
+.text-input.invalid { border-color: var(--diff-del-text); box-shadow: 0 0 0 3px rgba(248, 81, 73, 0.25); }
+
+/* ---------- Utilities ---------- */
+.hidden { display: none !important; }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
-/* Hide the elements with class 'hidden' */
-.hidden {
-    display: none;
+.field-error {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--diff-del-text);
 }
+
+/* ---------- Find options (Aa, ab, .*) ---------- */
+.find-wrap { position: relative; }
+.find-wrap .text-input { padding-right: 80px; }
+.find-opts {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 2px;
+}
+.find-opt-input { position: absolute; opacity: 0; pointer-events: none; }
+.find-opt {
+  font-family: Consolas, "SF Mono", Menlo, monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  width: 22px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.find-opt:hover { background: var(--soft-hover); color: var(--text); }
+.find-opt.underline { text-decoration: underline; text-underline-offset: 2px; }
+.find-opt-input:checked + .find-opt {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.find-opt-input:focus-visible + .find-opt { box-shadow: 0 0 0 2px var(--focus-ring); }
+
+.find-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 26px;
+}
+.find-count { font-size: 11px; color: var(--text-2); }
+.find-nav-btns { display: flex; gap: 4px; }
+
+.replace-btns { display: flex; gap: 6px; }
+.replace-btns .btn-mini { flex: 1; height: 30px; }
+
+.footer-note {
+  font-size: 11px;
+  color: var(--text-2);
+  text-align: center;
+  padding-top: 4px;
+}
+
+/* ---------- Dedupe callout and details ---------- */
+.dedupe-actions { display: flex; align-items: center; gap: 6px; }
+
+.callout {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-2);
+  padding: 2px 0 10px;
+}
+.link-btn {
+  font-family: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent-ink);
+  cursor: pointer;
+}
+.link-btn:hover { text-decoration: underline; }
+
+.mini-pop {
+  position: absolute;
+  top: calc(100% - 2px);
+  left: 0;
+  z-index: 30;
+  min-width: 200px;
+  max-width: 280px;
+  max-height: 160px;
+  overflow-y: auto;
+  background: var(--float);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.14), 0 2px 6px rgba(0,0,0,0.08);
+  padding: 4px;
+}
+.dup-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text);
+  padding: 5px 8px;
+  border-radius: 6px;
+}
+.dup-item:hover { background: var(--soft); }
+.dup-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 170px; }
+.dup-count { color: var(--text-2); flex-shrink: 0; }
+
+/* ---------- Diff ---------- */
+.diff {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  overflow: hidden;
+  display: none;
+}
+body.compare-on .diff.has-result { display: block; }
+.diff-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.diff-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8A8A8E;
+}
+.diff-chips { display: flex; gap: 6px; align-items: center; }
+.chip {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+.chip.add { color: var(--diff-add-text); background: var(--diff-add-bg); }
+.chip.del { color: var(--diff-del-text); background: var(--diff-del-bg); }
+
+.diff-body { font-family: Consolas, "SF Mono", Menlo, monospace; font-size: 12px; line-height: 1.7; max-height: 200px; overflow-y: auto; }
+.diff-line { display: flex; padding: 0 12px; white-space: pre-wrap; word-break: break-all; }
+.diff-line .mark { width: 16px; flex-shrink: 0; font-weight: 700; }
+.diff-line.del { background: var(--diff-del-bg); }
+.diff-line.del .mark { color: var(--diff-del-text); }
+.diff-line.add { background: var(--diff-add-bg); }
+.diff-line.add .mark { color: var(--diff-add-text); }
+.w-del { background: var(--diff-del-chip); border-radius: 3px; padding: 0 2px; }
+.w-add { background: var(--diff-add-chip); border-radius: 3px; padding: 0 2px; }

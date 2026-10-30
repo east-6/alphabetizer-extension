@@ -2,48 +2,393 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <title>Alphabetizer</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <h1>Alphabetizer</h1>
-  <p id="infoText">Characters: 0 • Words: 0 • Lines: 0</p>
-  
-  <textarea id="inputText" placeholder="Enter your text here"></textarea>
-  <button id="alphabetizeButton">Alphabetize</button>
-  <button id="settingsButton">Settings</button>
-  <div id="settingsContainer" class="hidden">
-    <label for="delimiter">Delimiter:</label>
-    <input type="text" id="delimiter" placeholder="Delimiter (default: newline)" />
-  
-    <label for="sortOrder">Sort order:</label>
-    <select id="sortOrder">
-      <option value="asc">Ascending</option>
-      <option value="desc">Descending</option>
-    </select>
-  
-    <label for="caseSensitivity">Case sensitivity:</label>
-    <select id="caseSensitivity">
-      <option value="sensitive">Case-sensitive</option>
-      <option value="insensitive">Case-insensitive</option>
-    </select>
-  
-    <label><input type="checkbox" id="removeEmptyLines"> Remove empty lines</label>
-  
-    <label><input type="checkbox" id="sortByNumber"> Sort by number</label>
-  
-    <label for="textTransform">Text transformation:</label>
-    <select id="textTransform">
-      <option value="none">None</option>
-      <option value="upper">Uppercase</option>
-      <option value="lower">Lowercase</option>
-      <option value="trim">Trim spaces</option>
-    </select>
-  
-    <label><input type="checkbox" id="addListNumbering"> Add list numbering</label>
-    <label for="customText">Custom text at the beginning:</label>
-    <input type="text" id="customText" placeholder="Custom text at the beginning (optional)" />
-    <label><input type="checkbox" id="customTextPosition"> Add custom text to the end of the line</label>
+
+  <div class="popup-head">
+    <div>
+      <div class="title-row">
+        <h1>Alphabetizer</h1>
+        <button class="icon-mini" id="helpBtn" title="How to use" aria-haspopup="dialog" aria-label="How to use Alphabetizer">?</button>
+      </div>
+      <p class="counter" id="counter">0 characters &middot; 0 words &middot; 0 lines</p>
+    </div>
+    <div class="head-controls">
+      <button class="icon-mini" id="undoBtn" title="Undo last action" aria-label="Undo last action" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+      </button>
+      <button class="icon-mini" id="copyBtn" title="Copy result" aria-label="Copy result">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      </button>
+      <span class="head-toggle">
+        <span class="head-label" id="alphaToggleLabel">Alphabetize</span>
+        <span class="switch"><input type="checkbox" id="alphaToggle" aria-labelledby="alphaToggleLabel"><span class="knob"></span></span>
+      </span>
+      <button class="btn-mini" id="exitCompareBtn">
+        <svg viewBox="0 0 14 14" fill="none" stroke-width="2" stroke-linecap="round"><path d="M2 2l10 10M12 2L2 12"/></svg>
+        Exit comparison mode
+      </button>
+    </div>
   </div>
+
+  <div class="compare-grid">
+    <div>
+      <div class="ta-label" id="labelA">Original</div>
+      <div class="ta-wrap">
+        <div class="ta-backdrop" id="backdropA" aria-hidden="true"></div>
+        <textarea id="textA" spellcheck="false" aria-label="Original text" placeholder="Enter your text here"></textarea>
+      </div>
+    </div>
+    <div id="sideB">
+      <div class="ta-label" id="labelB">Compare</div>
+      <textarea id="textB" spellcheck="false" aria-label="Compare text" placeholder="Text to compare against"></textarea>
+    </div>
+  </div>
+
+  <div class="button-row">
+    <button class="btn btn-primary" id="primaryBtn">Alphabetize</button>
+    <button class="btn btn-soft" id="settingsBtn" aria-expanded="false" aria-controls="settingsPanel">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Options
+    </button>
+    <button class="btn btn-narrow" id="advBtn" title="Advanced options" aria-label="Advanced options" aria-expanded="false" aria-controls="advPanel">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"/></svg>
+    </button>
+  </div>
+
+  <div class="diff" id="diffPanel">
+    <div class="diff-head">
+      <span class="diff-title">Differences</span>
+      <span class="diff-chips">
+        <button class="icon-mini" id="swapBtn" title="Swap sides" aria-label="Swap sides">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>
+        </button>
+        <button class="icon-mini" id="copyDiffBtn" title="Copy diff" aria-label="Copy diff">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </button>
+        <span class="chip add" id="chipAdd">+0</span>
+        <span class="chip del" id="chipDel">-0</span>
+      </span>
+    </div>
+    <div class="diff-body" id="diffBody"></div>
+  </div>
+
+  <div class="settings-cols">
+    <div class="settings" id="settingsPanel">
+      <div class="group-title">Sorting</div>
+
+      <div class="row">
+        <span class="row-label" id="orderLabel">Order</span>
+        <span class="segmented" role="radiogroup" aria-labelledby="orderLabel">
+          <input type="radio" name="order" id="orderAsc" checked>
+          <label for="orderAsc">A &rarr; Z</label>
+          <input type="radio" name="order" id="orderDesc">
+          <label for="orderDesc">Z &rarr; A</label>
+        </span>
+      </div>
+
+      <div class="row">
+        <span class="label-group">
+          <span class="row-label" id="sortFromLabel">Sort from character</span>
+          <span class="help" tabindex="0" aria-label="What does Sort from character do?" aria-describedby="tip-sortfrom">?
+            <span class="tip" id="tip-sortfrom">Sorts each line starting at this character and boxes it in your text, so at <code>5</code>, <code>Dr. Smith</code> sorts by <code>Smith</code>. At 1 it sorts normally.</span>
+          </span>
+        </span>
+        <span class="stepper">
+          <button class="icon-mini" id="sortFromDec" title="Earlier character" aria-label="Sort from an earlier character">
+            <svg viewBox="0 0 14 14" fill="none" stroke-width="2" stroke-linecap="round"><path d="M3 7h8"/></svg>
+          </button>
+          <input type="number" class="step-input" id="sortFrom" min="1" max="999" step="1" value="1" aria-labelledby="sortFromLabel" aria-describedby="tip-sortfrom">
+          <button class="icon-mini" id="sortFromInc" title="Later character" aria-label="Sort from a later character">
+            <svg viewBox="0 0 14 14" fill="none" stroke-width="2" stroke-linecap="round"><path d="M3 7h8M7 3v8"/></svg>
+          </button>
+        </span>
+      </div>
+
+      <div class="row">
+        <span class="label-group">
+          <span class="row-label" id="ignoreCaseLabel">Ignore case</span>
+          <span class="help" tabindex="0" aria-label="What does Ignore case do?" aria-describedby="tip-ignorecase">?
+            <span class="tip" id="tip-ignorecase">Treats uppercase and lowercase letters as the same while sorting, so <code>banana</code> and <code>Banana</code> sort together.</span>
+          </span>
+        </span>
+        <span class="switch"><input type="checkbox" id="swIgnoreCase" aria-labelledby="ignoreCaseLabel"><span class="knob"></span></span>
+      </div>
+
+      <div class="row">
+        <span class="row-label" id="sortNumberLabel">Sort by number</span>
+        <span class="switch"><input type="checkbox" id="swSortNumber" aria-labelledby="sortNumberLabel"><span class="knob"></span></span>
+      </div>
+
+      <div class="row">
+        <span class="label-group">
+          <span class="row-label" id="removeEmptyLabel">Remove empty lines</span>
+          <span class="help" tabindex="0" aria-label="What does Remove empty lines do?" aria-describedby="tip-removeempty">?
+            <span class="tip" id="tip-removeempty">Deletes blank lines (including whitespace-only lines) from the result.</span>
+          </span>
+        </span>
+        <span class="switch"><input type="checkbox" id="swRemoveEmpty" checked aria-labelledby="removeEmptyLabel"><span class="knob"></span></span>
+      </div>
+
+      <div class="row">
+        <span class="label-group">
+          <span class="row-label" id="dedupeLabel">Remove duplicates</span>
+          <span class="help" tabindex="0" aria-label="What does Remove duplicates do?" aria-describedby="tip-dedupe">?
+            <span class="tip" id="tip-dedupe">Removes duplicate lines right away, keeping the first occurrence. Respects Ignore case and the language rules.</span>
+          </span>
+        </span>
+        <span class="dedupe-actions">
+          <button class="btn-mini" id="dedupeBtn">Remove</button>
+          <button class="icon-mini hidden" id="dedupeUndoBtn" title="Undo remove duplicates" aria-label="Undo remove duplicates">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+          </button>
+        </span>
+      </div>
+      <div class="callout hidden" id="dedupeCallout">
+        <span id="dedupeMsg">0 duplicates removed</span>
+        <span id="dedupeSep">&bull;</span>
+        <button class="link-btn" id="dedupeDetailsBtn" aria-expanded="false" aria-controls="dedupeDetails">See details</button>
+        <div class="mini-pop hidden" id="dedupeDetails"></div>
+      </div>
+
+      <div class="group-title">Text output</div>
+
+      <div class="row">
+        <span class="row-label" id="transformLabel">Transform</span>
+        <div class="dropdown" id="transformDd">
+          <button class="dd-trigger" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="transformLabel ddValue">
+            <span class="dd-value" id="ddValue">None</span>
+            <svg viewBox="0 0 10 6" fill="none" stroke-width="1.5" stroke-linecap="round"><path d="M1 1l4 4 4-4"/></svg>
+          </button>
+          <div class="dd-menu" role="listbox" aria-labelledby="transformLabel">
+            <button class="dd-item" role="option" data-value="none" aria-selected="true">None</button>
+            <button class="dd-item" role="option" data-value="upper" aria-selected="false">Uppercase</button>
+            <button class="dd-item" role="option" data-value="lower" aria-selected="false">Lowercase</button>
+            <button class="dd-item" role="option" data-value="title" aria-selected="false">Title case</button>
+            <button class="dd-item" role="option" data-value="sentence" aria-selected="false">Sentence case</button>
+            <button class="dd-item" role="option" data-value="trim" aria-selected="false">Trim spaces</button>
+            <button class="dd-item" role="option" data-value="collapse" aria-selected="false">Collapse spaces</button>
+            <button class="dd-item" role="option" data-value="accents" aria-selected="false">Remove accents</button>
+            <button class="dd-item" role="option" data-value="slug" aria-selected="false">Slugify</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <span class="row-label" id="numberingLabel">List numbering</span>
+        <span class="switch"><input type="checkbox" id="swNumbering" aria-labelledby="numberingLabel"><span class="knob"></span></span>
+      </div>
+
+      <div class="row-stack">
+        <div class="row">
+          <span class="label-group">
+            <span class="row-label" id="customTextLabel">Custom text</span>
+            <span class="help" tabindex="0" aria-label="What does Custom text do?" aria-describedby="tip-custom">?
+              <span class="tip" id="tip-custom">Adds the text below to every line, at the start or the end, whichever you pick.</span>
+            </span>
+          </span>
+          <span class="segmented" role="radiogroup" aria-label="Custom text position">
+            <input type="radio" name="pos" id="posStart" checked>
+            <label for="posStart">Start</label>
+            <input type="radio" name="pos" id="posEnd">
+            <label for="posEnd">End</label>
+          </span>
+        </div>
+        <input type="text" class="text-input full" id="customText" aria-label="Custom text" placeholder="Added to every line (optional)">
+      </div>
+
+      <div class="row">
+        <span class="label-group">
+          <span class="row-label" id="delimiterLabel">Delimiter</span>
+          <span class="help" tabindex="0" aria-label="What does Delimiter do?" aria-describedby="tip-delimiter">?
+            <span class="tip" id="tip-delimiter">The character that splits your text into items, e.g. a comma for <code>a,b,c</code>. Leave empty to treat every line as one item.</span>
+          </span>
+        </span>
+        <input type="text" class="text-input short" id="delimiter" aria-labelledby="delimiterLabel" placeholder="newline">
+      </div>
+
+      <div class="group-title">General</div>
+
+      <div class="row">
+        <span class="label-group">
+          <span class="row-label" id="rememberLabel">Remember text</span>
+          <span class="help" tabindex="0" aria-label="What does Remember text do?" aria-describedby="tip-remember">?
+            <span class="tip" id="tip-remember">Saves your text and settings when the popup closes and restores them next time. Settings follow you to other devices you sign in to Chrome on.</span>
+          </span>
+        </span>
+        <span class="switch"><input type="checkbox" id="swRemember" checked aria-labelledby="rememberLabel"><span class="knob"></span></span>
+      </div>
+
+      <div class="row no-divider">
+        <span class="label-group">
+          <span class="row-label" id="autoCopyLabel">Auto-copy result</span>
+          <span class="help" tabindex="0" aria-label="What does Auto-copy result do?" aria-describedby="tip-autocopy">?
+            <span class="tip" id="tip-autocopy">Copies the result to your clipboard automatically after every alphabetize.</span>
+          </span>
+        </span>
+        <span class="switch"><input type="checkbox" id="swAutoCopy" aria-labelledby="autoCopyLabel"><span class="knob"></span></span>
+      </div>
+    </div>
+
+    <div class="settings" id="advPanel">
+      <div class="group-title">Advanced options</div>
+      <div class="adv-body">
+        <div class="sub-card">
+          <div class="sub-card-title">Find and replace</div>
+          <div class="find-wrap">
+            <input type="text" class="text-input full" id="findInput" aria-label="Find" placeholder="Find">
+            <span class="find-opts">
+              <input type="checkbox" class="find-opt-input" id="swMatchCase" aria-label="Match case">
+              <label class="find-opt" for="swMatchCase" title="Match case">Aa</label>
+              <input type="checkbox" class="find-opt-input" id="swWholeWord" aria-label="Match whole word">
+              <label class="find-opt underline" for="swWholeWord" title="Match whole word">ab</label>
+              <input type="checkbox" class="find-opt-input" id="swRegex" aria-label="Use regular expression">
+              <label class="find-opt" for="swRegex" title="Use regular expression">.*</label>
+            </span>
+          </div>
+          <div class="find-nav">
+            <span class="find-count" id="findCount" aria-live="polite"></span>
+            <span class="find-nav-btns">
+              <button class="icon-mini" id="prevMatchBtn" title="Previous match" aria-label="Previous match" disabled>
+                <svg viewBox="0 0 10 6" fill="none" stroke-width="1.5" stroke-linecap="round"><path d="M1 5l4-4 4 4"/></svg>
+              </button>
+              <button class="icon-mini" id="nextMatchBtn" title="Next match" aria-label="Next match" disabled>
+                <svg viewBox="0 0 10 6" fill="none" stroke-width="1.5" stroke-linecap="round"><path d="M1 1l4 4 4-4"/></svg>
+              </button>
+            </span>
+          </div>
+          <div class="field-error hidden" id="regexError">Invalid regular expression</div>
+          <input type="text" class="text-input full" id="replaceInput" aria-label="Replace with" placeholder="Replace with">
+          <div class="replace-btns">
+            <button class="btn-mini" id="replaceOneBtn" disabled>Replace selection</button>
+            <button class="btn-mini accent" id="replaceAllBtn">Replace all</button>
+          </div>
+        </div>
+
+        <div class="row">
+          <span class="label-group">
+            <span class="row-label" id="compareLabel">Compare mode</span>
+            <span class="help" tabindex="0" aria-label="What does Compare mode do?" aria-describedby="tip-compare">?
+              <span class="tip" id="tip-compare">Adds a second text field and shows the differences between the two lists, like a code review diff. The popup grows to fit.</span>
+            </span>
+          </span>
+          <span class="switch"><input type="checkbox" id="swCompare" aria-labelledby="compareLabel"><span class="knob"></span></span>
+        </div>
+
+        <div class="row">
+          <span class="label-group">
+            <span class="row-label" id="groupLetterLabel">Group by letter</span>
+            <span class="help" tabindex="0" aria-label="What does Group by letter do?" aria-describedby="tip-group">?
+              <span class="tip" id="tip-group">Inserts a heading above each letter group (A, B, C) after sorting, using the same language rules. Handy for glossaries.</span>
+            </span>
+          </span>
+          <span class="switch"><input type="checkbox" id="swGroupLetter" aria-labelledby="groupLetterLabel"><span class="knob"></span></span>
+        </div>
+
+        <div class="row">
+          <span class="label-group">
+            <span class="row-label">Clean list markers</span>
+            <span class="help" tabindex="0" aria-label="What does Clean list markers do?" aria-describedby="tip-clean">?
+              <span class="tip" id="tip-clean">Strips bullets and numbering from the start of every line: <code>- item</code>, <code>&bull; item</code> and <code>1. item</code> all become <code>item</code>.</span>
+            </span>
+          </span>
+          <button class="btn-mini" id="cleanBtn">Clean</button>
+        </div>
+
+        <div class="row">
+          <span class="row-label">Randomize list</span>
+          <button class="btn-mini" id="shuffleBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>
+            Shuffle
+          </button>
+        </div>
+
+        <div class="row no-divider">
+          <span class="label-group">
+            <span class="row-label">Keyboard shortcuts</span>
+            <span class="help" tabindex="0" aria-label="What are the keyboard shortcuts?" aria-describedby="tip-shortcuts">?
+              <span class="tip" id="tip-shortcuts"><code>Ctrl+Enter</code> alphabetize, <code>Ctrl+Z</code> undo, <code>Ctrl+Shift+C</code> copy result.</span>
+            </span>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="footer-note">Everything runs locally. Your text never leaves your device.</p>
+
+  <div class="modal hidden" id="helpModal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+    <div class="modal-card">
+      <div class="modal-head">
+        <span class="modal-title" id="helpTitle">How to use Alphabetizer</span>
+        <button class="icon-mini" id="helpCloseBtn" aria-label="Close help">
+          <svg viewBox="0 0 14 14" fill="none" stroke-width="2" stroke-linecap="round"><path d="M2 2l10 10M12 2L2 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="group-title">Quick start</div>
+        <ol>
+          <li>Paste or type your list, one item per line.</li>
+          <li>Click <strong>Alphabetize</strong>.</li>
+          <li>Click the copy icon at the top right to copy the result.</li>
+        </ol>
+        <p>The arrow icon next to it undoes any step. Sorting follows the language of your text automatically, so accented and Turkish letters land in the right place with nothing to configure.</p>
+
+        <div class="group-title">Change how it sorts</div>
+        <ol>
+          <li>Click <strong>Options</strong>.</li>
+          <li>Pick A to Z or Z to A, and turn on <strong>Ignore case</strong>, <strong>Sort by number</strong> (puts item2 before item10), or <strong>Remove empty lines</strong>.</li>
+          <li>Click <strong>Alphabetize</strong> again. Re-sorting with new settings is always safe.</li>
+        </ol>
+        <p>To sort by a later part of each line, raise <strong>Sort from character</strong>. At 5, <code>Dr. Smith</code> sorts by <code>Smith</code>, and the character each line sorts by gets a box in your text.</p>
+
+        <div class="group-title">Remove duplicate lines</div>
+        <ol>
+          <li>Click <strong>Options</strong>, then press <strong>Remove</strong> next to Remove duplicates.</li>
+          <li>Click <strong>See details</strong> to check what was removed, or the small undo button beside Remove to bring everything back.</li>
+        </ol>
+
+        <div class="group-title">Change the text itself</div>
+        <ol>
+          <li>Click <strong>Options</strong> and look under Text output.</li>
+          <li>Pick a <strong>Transform</strong> (uppercase, lowercase, title case, sentence case, trim, collapse spaces, remove accents, slugify), turn on <strong>List numbering</strong>, or type <strong>Custom text</strong> to add to the start or end of every line.</li>
+          <li>Click <strong>Alphabetize</strong> to apply.</li>
+        </ol>
+        <p>Working with comma separated items instead of lines? Type the separator, like a comma, into <strong>Delimiter</strong>.</p>
+
+        <div class="group-title">Find and replace</div>
+        <ol>
+          <li>Click the sliders button to the right of Options.</li>
+          <li>Type into <strong>Find</strong>. Matches highlight in your text immediately; jump between them with the arrows or Enter.</li>
+          <li>Toggle <strong>Aa</strong> for match case, <strong>ab</strong> for whole words, <strong>.*</strong> for regex.</li>
+          <li>Type the replacement, then press <strong>Replace selection</strong> for the current match or <strong>Replace all</strong>.</li>
+        </ol>
+
+        <div class="group-title">Compare two lists</div>
+        <ol>
+          <li>Click the sliders button, then turn on <strong>Compare mode</strong>. A second field appears.</li>
+          <li>Paste the second list and press <strong>Compare</strong>. Added and removed lines show like a code diff.</li>
+          <li>Use the <strong>Alphabetize</strong> toggle in the header to sort both lists too, the arrows above the diff to swap sides, and <strong>Exit comparison mode</strong> when done.</li>
+        </ol>
+
+        <div class="group-title">More tools in Advanced options</div>
+        <p><strong>Clean list markers</strong>: press Clean to strip bullets and numbering like "- item" or "1. item" from a pasted list. <strong>Randomize list</strong>: press Shuffle. <strong>Group by letter</strong>: turn it on and sorting adds A, B, C headings.</p>
+
+        <div class="group-title">Outside the popup</div>
+        <ol>
+          <li>Select text on any web page.</li>
+          <li>Right-click it and choose <strong>Alphabetize selection</strong>.</li>
+          <li>The sorted text is now on your clipboard, ready to paste.</li>
+        </ol>
+        <p>Shortcuts: <code>Ctrl+Enter</code> sort, <code>Ctrl+Z</code> undo, <code>Ctrl+Shift+C</code> copy, <code>Ctrl+Shift+L</code> open this popup.</p>
+        <p>Under General you can turn off <strong>Remember text</strong> if you don't want your text kept between sessions, or turn on <strong>Auto-copy result</strong> to skip the copy click. Everything runs locally. Your text never leaves your device.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="sr-only" id="srStatus" role="status" aria-live="polite"></div>
 
   <script src="popup.js"></script>
 </body>
