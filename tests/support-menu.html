@@ -23,12 +23,36 @@
     // Results also land on window.testResults.
     const STORE_KEY = 'alphabetizer-state';
     const AMOUNTS = ['2', '5', '10'];
-    // The manifest must not gain permissions: a new one warns users on update.
-    const PERMISSIONS = ['storage', 'contextMenus', 'scripting', 'activeTab'];
+    // The manifest as it was before this feature, apart from the version:
+    // any new key, permission or policy fails. A new permission warns users
+    // on update and can disable the extension until they accept it.
+    const MANIFEST = {
+      manifest_version: 3,
+      name: 'Alphabetizer',
+      version: '2.3',
+      description: 'Sort text lines instantly with language-aware alphabetizing, dedupe, find and replace, and compare.',
+      icons: { 48: 'icon48.png', 128: 'icon128.png' },
+      action: { default_icon: 'icon48.png', default_popup: 'popup.html' },
+      background: { service_worker: 'background.js' },
+      permissions: ['storage', 'contextMenus', 'scripting', 'activeTab'],
+      commands: {
+        _execute_action: {
+          suggested_key: { default: 'Ctrl+Shift+L' },
+          description: 'Open Alphabetizer'
+        }
+      }
+    };
+    // Built from their codes, like ACUTE in sort-from-character.html, so this
+    // file holds no dash characters itself.
+    const DASHES = new RegExp('[' + String.fromCharCode(0x2013, 0x2014) + ']');
+    const SOURCES = ['../popup.html', '../popup.css', '../popup.js', '../manifest.json', 'support-menu.html'];
     const frame = document.getElementById('frame');
     let doc, win;
+    // Whether the popup cancelled the last link click itself.
+    let lastLinkClickBlocked = null;
     const $ = id => doc.getElementById(id);
     const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+    const source = async path => (await fetch(`${path}?t=${Date.now()}`)).text();
 
     function navigate(src) {
       return new Promise(resolve => {
@@ -43,28 +67,51 @@
       await navigate(`../popup.html?t=${Date.now()}`);
       win = frame.contentWindow;
       doc = frame.contentDocument;
-      // Links open a new tab; in tests, cancel the navigation but let the
-      // popup's own click handlers run.
-      doc.addEventListener('click', e => {
-        if (e.target.closest && e.target.closest('a[target="_blank"]')) e.preventDefault();
-      }, true);
+      lastLinkClickBlocked = null;
+      // Links open a new tab. This runs last (bubble phase on the window), so
+      // it records whether the popup itself blocked the click, then cancels
+      // the navigation so the test page stays put.
+      win.addEventListener('click', e => {
+        if (!(e.target.closest && e.target.closest('a[target="_blank"]'))) return;
+        lastLinkClickBlocked = e.defaultPrevented;
+        e.preventDefault();
+      });
       await wait(50);
     }
 
+    // Returns false when the popup cancelled the key's default action.
     function key(el, k) {
-      el.dispatchEvent(new win.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+      return el.dispatchEvent(new win.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
     }
     const heart = () => $('supportBtn');
     const menu = () => $('supportMenu');
     const items = () => [...doc.querySelectorAll('#supportMenu .support-item')];
     const isShown = el => win.getComputedStyle(el).display !== 'none';
     const focused = () => doc.activeElement;
+    const expanded = () => heart().getAttribute('aria-expanded');
+
+    // Every CSS rule in the popup, including the ones inside @media blocks.
+    function cssRules() {
+      const out = [];
+      const walk = (rules, media) => [...rules].forEach(r => {
+        if (r.cssRules && !r.selectorText) walk(r.cssRules, r.conditionText || media);
+        else if (r.selectorText) out.push({ rule: r, media });
+      });
+      [...doc.styleSheets].forEach(sheet => walk(sheet.cssRules, ''));
+      return out;
+    }
 
     function eq(actual, expected) {
       const a = JSON.stringify(actual), e = JSON.stringify(expected);
       if (a !== e) throw new Error(`expected ${e}, got ${a}`);
     }
     function ok(value, message) { if (!value) throw new Error(message); }
+    // eq would call any two elements equal (both stringify to {}), so
+    // elements are compared by identity.
+    const describe = el => !el ? String(el) : el.id ? `#${el.id}` : el.dataset && el.dataset.amount ? `$${el.dataset.amount}` : el.tagName;
+    function same(actual, expected) {
+      if (actual !== expected) throw new Error(`expected ${describe(expected)}, got ${describe(actual)}`);
+    }
 
     const tests = [];
     const test = (name, fn) => tests.push({ name, fn });
@@ -73,7 +120,7 @@
       ok(heart(), 'no support button (#supportBtn)');
       eq($('helpBtn').nextElementSibling.id, 'supportWrap');
       eq(heart().getAttribute('aria-label'), 'Support Alphabetizer');
-      eq(heart().getAttribute('aria-expanded'), 'false');
+      eq(expanded(), 'false');
       eq(heart().getAttribute('aria-controls'), 'supportMenu');
       eq(isShown(menu()), false);
     });
@@ -81,10 +128,10 @@
     test('clicking the heart opens the menu, clicking again closes it', async () => {
       heart().click();
       eq(isShown(menu()), true);
-      eq(heart().getAttribute('aria-expanded'), 'true');
+      eq(expanded(), 'true');
       heart().click();
       eq(isShown(menu()), false);
-      eq(heart().getAttribute('aria-expanded'), 'false');
+      eq(expanded(), 'false');
     });
 
     test('the menu lists $2, $5 and $10 with the one-time note', async () => {
@@ -105,6 +152,17 @@
       eq(new Set(items().map(a => a.href)).size, 3);
     });
 
+    test('the links live only in SUPPORT_LINKS, so changing them is a one-line edit', async () => {
+      const html = await source('../popup.html');
+      ok(!html.includes('whop.com'), 'popup.html has a hard-coded Whop URL');
+      const markup = new DOMParser().parseFromString(html, 'text/html');
+      markup.querySelectorAll('.support-item').forEach(a => {
+        ok(!a.hasAttribute('href'), 'a .support-item has an href in the markup');
+      });
+      const js = await source('../popup.js');
+      eq((js.match(/https:\/\/whop\.com/g) || []).length, AMOUNTS.length);
+    });
+
     test('links open in a new tab without an opener or referrer', async () => {
       items().forEach(a => {
         eq(a.getAttribute('target'), '_blank');
@@ -119,25 +177,40 @@
       });
     });
 
-    test('Escape closes the menu and puts focus back on the heart', async () => {
+    test('Tab goes from the heart straight into the amounts', async () => {
+      heart().click();
+      same(heart().nextElementSibling, menu());
+      const tabbable = [...doc.querySelectorAll('a[href], button, input, textarea, [tabindex]')]
+        .filter(el => el.tabIndex >= 0 && !el.disabled && el.getClientRects().length > 0);
+      eq(tabbable.indexOf(items()[0]), tabbable.indexOf(heart()) + 1);
+    });
+
+    test('Escape closes the menu, puts focus back on the heart, and does not reach Chrome', async () => {
       heart().click();
       items()[1].focus();
-      key(items()[1], 'Escape');
+      // An Escape the page leaves alone closes the whole extension popup.
+      eq(key(items()[1], 'Escape'), false);
       eq(isShown(menu()), false);
-      eq(focused(), heart());
+      eq(expanded(), 'false');
+      same(focused(), heart());
     });
 
     test('a click anywhere else closes the menu', async () => {
       heart().click();
       $('textA').click();
       eq(isShown(menu()), false);
+      eq(expanded(), 'false');
     });
 
     test('a click on the menu padding keeps it open', async () => {
+      // What a real click does: the heart takes focus, then the panel does.
+      heart().focus();
       heart().click();
       menu().focus();
+      same(focused(), menu());
       menu().click();
       eq(isShown(menu()), true);
+      eq(expanded(), 'true');
     });
 
     test('moving focus out of the menu closes it', async () => {
@@ -145,38 +218,42 @@
       items()[0].focus();
       $('textA').focus();
       eq(isShown(menu()), false);
+      eq(expanded(), 'false');
     });
 
     test('ArrowDown on the heart opens the menu on the first amount', async () => {
       heart().focus();
-      key(heart(), 'ArrowDown');
+      eq(key(heart(), 'ArrowDown'), false);
       eq(isShown(menu()), true);
-      eq(focused(), items()[0]);
+      eq(expanded(), 'true');
+      same(focused(), items()[0]);
     });
 
-    test('arrow keys, Home and End move through the amounts and stop at the ends', async () => {
+    test('arrow keys, Home and End move through the amounts, stop at the ends, and never scroll', async () => {
       heart().focus();
       key(heart(), 'ArrowDown');
+      eq(key(focused(), 'ArrowDown'), false);
+      same(focused(), items()[1]);
       key(focused(), 'ArrowDown');
-      eq(focused(), items()[1]);
       key(focused(), 'ArrowDown');
-      key(focused(), 'ArrowDown');
-      eq(focused(), items()[2]);
+      same(focused(), items()[2]);
+      eq(key(focused(), 'ArrowUp'), false);
+      same(focused(), items()[1]);
+      eq(key(focused(), 'Home'), false);
+      same(focused(), items()[0]);
       key(focused(), 'ArrowUp');
-      eq(focused(), items()[1]);
-      key(focused(), 'Home');
-      eq(focused(), items()[0]);
-      key(focused(), 'ArrowUp');
-      eq(focused(), items()[0]);
-      key(focused(), 'End');
-      eq(focused(), items()[2]);
+      same(focused(), items()[0]);
+      eq(key(focused(), 'End'), false);
+      same(focused(), items()[2]);
     });
 
-    test('picking an amount closes the menu and refocuses the heart', async () => {
+    test('picking an amount lets the link open, closes the menu and refocuses the heart', async () => {
       heart().click();
       items()[2].click();
+      eq(lastLinkClickBlocked, false);
       eq(isShown(menu()), false);
-      eq(focused(), heart());
+      eq(expanded(), 'false');
+      same(focused(), heart());
     });
 
     test('opening Help closes the menu, and Escape still closes Help', async () => {
@@ -184,6 +261,7 @@
       heart().focus();
       $('helpBtn').click();
       eq(isShown(menu()), false);
+      eq(expanded(), 'false');
       eq($('helpModal').classList.contains('hidden'), false);
       key(focused(), 'Escape');
       eq($('helpModal').classList.contains('hidden'), true);
@@ -214,6 +292,22 @@
       eq(win.getComputedStyle(menu()).backgroundColor, float);
     });
 
+    test('in both themes, every background on the panel comes from --float or --tip-bg', async () => {
+      // The page runs in one color scheme, so read the rules for the other too.
+      const panelRules = cssRules().filter(({ rule }) =>
+        /support-(menu|wrap)/.test(rule.selectorText) && !/support-item/.test(rule.selectorText));
+      ok(panelRules.length > 0, 'no CSS rules for the support panel');
+      panelRules.forEach(({ rule, media }) => {
+        ['background', 'background-color'].forEach(prop => {
+          const value = rule.style.getPropertyValue(prop);
+          if (value) {
+            ok(/var\(--(float|tip-bg)\)/.test(value),
+              `${rule.selectorText}${media ? ` in ${media}` : ''} sets ${prop}: ${value}`);
+          }
+        });
+      });
+    });
+
     test('the open menu stays inside the 350px popup', async () => {
       heart().click();
       const box = menu().getBoundingClientRect();
@@ -233,18 +327,27 @@
         ok(!/tip/i.test(el.id), `id ${el.id} uses tip`);
         ok(![...el.classList].some(c => /tip/i.test(c)), `class on ${el.tagName} uses tip`);
       });
+      cssRules().filter(({ rule }) => /support/.test(rule.selectorText)).forEach(({ rule }) => {
+        ok(!/tip/i.test(rule.selectorText), `selector ${rule.selectorText} uses tip`);
+        [...rule.style].forEach(prop => {
+          ok(!/tip/i.test(prop), `${rule.selectorText} declares ${prop}`);
+        });
+      });
     });
 
-    test('no em or en dashes in the support copy', async () => {
-      ok(!/[–—]/.test($('supportWrap').textContent), 'found an em or en dash');
+    test('no em or en dashes in the popup, its copy or this test', async () => {
+      const wrap = [$('supportWrap'), ...$('supportWrap').querySelectorAll('*')];
+      wrap.forEach(el => [...el.attributes].forEach(attr => {
+        ok(!DASHES.test(attr.value), `dash in ${attr.name} on ${el.tagName}`);
+      }));
+      ok(!DASHES.test($('supportWrap').textContent), 'dash in the support copy');
+      for (const path of SOURCES) {
+        ok(!DASHES.test(await source(path)), `dash in ${path}`);
+      }
     });
 
-    test('the manifest is 2.3 and asks for no new permissions', async () => {
-      const manifest = await (await fetch(`../manifest.json?t=${Date.now()}`)).json();
-      eq(manifest.version, '2.3');
-      eq(manifest.permissions, PERMISSIONS);
-      eq(manifest.host_permissions, undefined);
-      eq(manifest.optional_permissions, undefined);
+    test('the manifest is 2.3 and otherwise unchanged: no new permissions', async () => {
+      eq(JSON.parse(await source('../manifest.json')), MANIFEST);
     });
 
     (async () => {
