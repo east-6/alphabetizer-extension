@@ -807,11 +807,78 @@ helpBtn.addEventListener('click', () => setHelpOpen(true));
 helpCloseBtn.addEventListener('click', () => setHelpOpen(false));
 helpModal.addEventListener('click', e => { if (e.target === helpModal) setHelpOpen(false); });
 
+/* ---------- Support menu ---------- */
+// One-time Whop checkout links, one per amount. Changing a link is a
+// one-line edit here, and forks can point these at their own.
+const SUPPORT_LINKS = {
+  2: 'https://whop.com/checkout/REPLACE-WITH-2-DOLLAR-LINK/',
+  5: 'https://whop.com/checkout/REPLACE-WITH-5-DOLLAR-LINK/',
+  10: 'https://whop.com/checkout/REPLACE-WITH-10-DOLLAR-LINK/'
+};
+
+const supportWrap = $('supportWrap'), supportBtn = $('supportBtn');
+const supportItems = [...supportWrap.querySelectorAll('.support-item')];
+
+// Plain links that open a new tab: no permission needed, and nothing from
+// the popup goes along with them, so the text still never leaves the device.
+supportItems.forEach(a => { a.href = SUPPORT_LINKS[a.dataset.amount]; });
+
+const supportIsOpen = () => supportWrap.classList.contains('open');
+function setSupportOpen(open) {
+  supportWrap.classList.toggle('open', open);
+  supportBtn.setAttribute('aria-expanded', String(open));
+}
+
+// A disclosure, not a menu: focus stays on the heart, and Tab moves on into
+// the links because they come right after it in the page.
+supportBtn.addEventListener('click', () => setSupportOpen(!supportIsOpen()));
+
+supportItems.forEach(a => a.addEventListener('click', () => {
+  setSupportOpen(false);
+  supportBtn.focus();
+}));
+
+// Arrow keys as an extra, moving the same way as the Transform dropdown
+supportWrap.addEventListener('keydown', e => {
+  const open = supportIsOpen();
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (!open) {
+      setSupportOpen(true);
+      supportItems[0].focus();
+    } else {
+      const idx = supportItems.indexOf(document.activeElement);
+      const next = idx === -1 ? 0
+        : e.key === 'ArrowDown' ? Math.min(idx + 1, supportItems.length - 1) : Math.max(idx - 1, 0);
+      supportItems[next].focus();
+    }
+  } else if (e.key === 'Home' && open) {
+    e.preventDefault();
+    supportItems[0].focus();
+  } else if (e.key === 'End' && open) {
+    e.preventDefault();
+    supportItems[supportItems.length - 1].focus();
+  }
+});
+
+supportWrap.addEventListener('focusout', e => {
+  if (!supportWrap.contains(e.relatedTarget)) setSupportOpen(false);
+});
+document.addEventListener('click', e => {
+  if (supportIsOpen() && !supportWrap.contains(e.target)) setSupportOpen(false);
+});
+
 /* ---------- Keyboard shortcuts ---------- */
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && !helpModal.classList.contains('hidden')) {
     e.preventDefault();
     setHelpOpen(false);
+    return;
+  }
+  if (e.key === 'Escape' && supportIsOpen()) {
+    e.preventDefault();
+    setSupportOpen(false);
+    supportBtn.focus();
     return;
   }
   if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); primaryBtn.click(); }

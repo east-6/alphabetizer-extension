@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Support menu tests</title>
+  <style>
+    body { font: 13px/1.5 system-ui, sans-serif; padding: 16px; }
+    .pass { color: #1A7F37; }
+    .fail { color: #CF222E; }
+    iframe { width: 820px; height: 640px; border: 1px solid #ccc; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <h1>Support menu</h1>
+  <p id="summary">Running...</p>
+  <ol id="results"></ol>
+  <iframe id="frame" title="Popup under test"></iframe>
+
+  <script>
+    // Drives the real popup.html in an iframe through DOM events and checks
+    // what the user would see. Serve the project folder (.claude/launch.json
+    // runs it on port 3456) and open /tests/support-menu.html.
+    // Results also land on window.testResults.
+    const STORE_KEY = 'alphabetizer-state';
+    const AMOUNTS = ['2', '5', '10'];
+    // The manifest must not gain permissions: a new one warns users on update.
+    const PERMISSIONS = ['storage', 'contextMenus', 'scripting', 'activeTab'];
+    const frame = document.getElementById('frame');
+    let doc, win;
+    const $ = id => doc.getElementById(id);
+    const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+    function navigate(src) {
+      return new Promise(resolve => {
+        frame.onload = () => resolve();
+        frame.src = src;
+      });
+    }
+
+    async function load() {
+      await navigate('about:blank');
+      localStorage.removeItem(STORE_KEY);
+      await navigate(`../popup.html?t=${Date.now()}`);
+      win = frame.contentWindow;
+      doc = frame.contentDocument;
+      // Links open a new tab; in tests, cancel the navigation but let the
+      // popup's own click handlers run.
+      doc.addEventListener('click', e => {
+        if (e.target.closest && e.target.closest('a[target="_blank"]')) e.preventDefault();
+      }, true);
+      await wait(50);
+    }
+
+    function key(el, k) {
+      el.dispatchEvent(new win.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+    }
+    const heart = () => $('supportBtn');
+    const menu = () => $('supportMenu');
+    const items = () => [...doc.querySelectorAll('#supportMenu .support-item')];
+    const isShown = el => win.getComputedStyle(el).display !== 'none';
+    const focused = () => doc.activeElement;
+
+    function eq(actual, expected) {
+      const a = JSON.stringify(actual), e = JSON.stringify(expected);
+      if (a !== e) throw new Error(`expected ${e}, got ${a}`);
+    }
+    function ok(value, message) { if (!value) throw new Error(message); }
+
+    const tests = [];
+    const test = (name, fn) => tests.push({ name, fn });
+
+    test('the heart sits right after the help button and starts closed', async () => {
+      ok(heart(), 'no support button (#supportBtn)');
+      eq($('helpBtn').nextElementSibling.id, 'supportWrap');
+      eq(heart().getAttribute('aria-label'), 'Support Alphabetizer');
+      eq(heart().getAttribute('aria-expanded'), 'false');
+      eq(heart().getAttribute('aria-controls'), 'supportMenu');
+      eq(isShown(menu()), false);
+    });
+
+    test('clicking the heart opens the menu, clicking again closes it', async () => {
+      heart().click();
+      eq(isShown(menu()), true);
+      eq(heart().getAttribute('aria-expanded'), 'true');
+      heart().click();
+      eq(isShown(menu()), false);
+      eq(heart().getAttribute('aria-expanded'), 'false');
+    });
+
+    test('the menu lists $2, $5 and $10 with the one-time note', async () => {
+      heart().click();
+      eq(items().map(a => a.firstElementChild.firstChild.textContent), ['$2', '$5', '$10']);
+      eq($('supportNote').textContent, 'One-time, via Whop. Everything stays free.');
+      eq($('supportTitle').textContent, 'Support Alphabetizer');
+    });
+
+    test('each amount links to its own https Whop URL from SUPPORT_LINKS', async () => {
+      const links = win.eval('SUPPORT_LINKS');
+      eq(Object.keys(links), AMOUNTS);
+      eq(items().map(a => a.dataset.amount), AMOUNTS);
+      items().forEach(a => {
+        eq(a.getAttribute('href'), links[a.dataset.amount]);
+        ok(/^https:\/\/whop\.com\//.test(a.href), `not a whop.com https link: ${a.href}`);
+      });
+      eq(new Set(items().map(a => a.href)).size, 3);
+    });
+
+    test('links open in a new tab without an opener or referrer', async () => {
+      items().forEach(a => {
+        eq(a.getAttribute('target'), '_blank');
+        eq(a.getAttribute('rel').split(' ').sort(), ['noopener', 'noreferrer']);
+      });
+    });
+
+    test('screen readers hear where each link goes', async () => {
+      items().forEach(a => {
+        eq(a.querySelector('.sr-only').textContent, ', opens Whop in a new tab');
+        eq(a.getAttribute('aria-describedby'), 'supportNote');
+      });
+    });
+
+    test('Escape closes the menu and puts focus back on the heart', async () => {
+      heart().click();
+      items()[1].focus();
+      key(items()[1], 'Escape');
+      eq(isShown(menu()), false);
+      eq(focused(), heart());
+    });
+
+    test('a click anywhere else closes the menu', async () => {
+      heart().click();
+      $('textA').click();
+      eq(isShown(menu()), false);
+    });
+
+    test('a click on the menu padding keeps it open', async () => {
+      heart().click();
+      menu().focus();
+      menu().click();
+      eq(isShown(menu()), true);
+    });
+
+    test('moving focus out of the menu closes it', async () => {
+      heart().click();
+      items()[0].focus();
+      $('textA').focus();
+      eq(isShown(menu()), false);
+    });
+
+    test('ArrowDown on the heart opens the menu on the first amount', async () => {
+      heart().focus();
+      key(heart(), 'ArrowDown');
+      eq(isShown(menu()), true);
+      eq(focused(), items()[0]);
+    });
+
+    test('arrow keys, Home and End move through the amounts and stop at the ends', async () => {
+      heart().focus();
+      key(heart(), 'ArrowDown');
+      key(focused(), 'ArrowDown');
+      eq(focused(), items()[1]);
+      key(focused(), 'ArrowDown');
+      key(focused(), 'ArrowDown');
+      eq(focused(), items()[2]);
+      key(focused(), 'ArrowUp');
+      eq(focused(), items()[1]);
+      key(focused(), 'Home');
+      eq(focused(), items()[0]);
+      key(focused(), 'ArrowUp');
+      eq(focused(), items()[0]);
+      key(focused(), 'End');
+      eq(focused(), items()[2]);
+    });
+
+    test('picking an amount closes the menu and refocuses the heart', async () => {
+      heart().click();
+      items()[2].click();
+      eq(isShown(menu()), false);
+      eq(focused(), heart());
+    });
+
+    test('opening Help closes the menu, and Escape still closes Help', async () => {
+      heart().click();
+      heart().focus();
+      $('helpBtn').click();
+      eq(isShown(menu()), false);
+      eq($('helpModal').classList.contains('hidden'), false);
+      key(focused(), 'Escape');
+      eq($('helpModal').classList.contains('hidden'), true);
+    });
+
+    test('the Transform dropdown and the support menu never stay open together', async () => {
+      $('settingsBtn').click();
+      heart().click();
+      doc.querySelector('#transformDd .dd-trigger').click();
+      eq(isShown(menu()), false);
+      eq($('transformDd').classList.contains('open'), true);
+    });
+
+    test('sorting still works with the menu in the header', async () => {
+      $('textA').value = 'pear\napple\nbanana';
+      $('textA').dispatchEvent(new win.Event('input', { bubbles: true }));
+      $('primaryBtn').click();
+      eq($('textA').value, 'apple\nbanana\npear');
+    });
+
+    test('the menu floats on --float, not an app surface', async () => {
+      heart().click();
+      const probe = doc.createElement('div');
+      probe.style.background = 'var(--float)';
+      doc.body.appendChild(probe);
+      const float = win.getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      eq(win.getComputedStyle(menu()).backgroundColor, float);
+    });
+
+    test('the open menu stays inside the 350px popup', async () => {
+      heart().click();
+      const box = menu().getBoundingClientRect();
+      ok(box.left >= 0 && box.right <= doc.body.clientWidth,
+        `menu spans ${Math.round(box.left)} to ${Math.round(box.right)}, popup is ${doc.body.clientWidth}`);
+    });
+
+    test('Undo and Copy keep their place at the right of the header', async () => {
+      const head = doc.querySelector('.popup-head').getBoundingClientRect();
+      const controls = doc.querySelector('.head-controls').getBoundingClientRect();
+      eq(Math.round(controls.right), Math.round(head.right));
+      eq(Math.round(controls.top), Math.round(head.top));
+    });
+
+    test('no new name reuses "tip", which belongs to the help tooltips', async () => {
+      [$('supportWrap'), ...$('supportWrap').querySelectorAll('*')].forEach(el => {
+        ok(!/tip/i.test(el.id), `id ${el.id} uses tip`);
+        ok(![...el.classList].some(c => /tip/i.test(c)), `class on ${el.tagName} uses tip`);
+      });
+    });
+
+    test('no em or en dashes in the support copy', async () => {
+      ok(!/[–—]/.test($('supportWrap').textContent), 'found an em or en dash');
+    });
+
+    test('the manifest is 2.3 and asks for no new permissions', async () => {
+      const manifest = await (await fetch(`../manifest.json?t=${Date.now()}`)).json();
+      eq(manifest.version, '2.3');
+      eq(manifest.permissions, PERMISSIONS);
+      eq(manifest.host_permissions, undefined);
+      eq(manifest.optional_permissions, undefined);
+    });
+
+    (async () => {
+      const list = document.getElementById('results');
+      let failed = 0;
+      for (const t of tests) {
+        const li = document.createElement('li');
+        try {
+          await load();
+          await t.fn();
+          li.className = 'pass';
+          li.textContent = `PASS  ${t.name}`;
+        } catch (err) {
+          failed++;
+          li.className = 'fail';
+          li.textContent = `FAIL  ${t.name}: ${err.message}`;
+        }
+        list.appendChild(li);
+      }
+      document.getElementById('summary').textContent = `${tests.length - failed} of ${tests.length} passed`;
+      window.testResults = { passed: tests.length - failed, failed, lines: [...list.children].map(li => li.textContent) };
+    })();
+  </script>
+</body>
+</html>
