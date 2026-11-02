@@ -12,6 +12,35 @@
       <div class="title-row">
         <h1>Alphabetizer</h1>
         <button class="icon-mini" id="helpBtn" title="How to use" aria-haspopup="dialog" aria-label="How to use Alphabetizer">?</button>
+        <div class="support-wrap" id="supportWrap">
+          <button class="icon-mini" id="supportBtn" title="Support Alphabetizer" aria-label="Support Alphabetizer" aria-expanded="false" aria-controls="supportMenu">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+          </button>
+          <div class="support-menu" id="supportMenu" tabindex="-1">
+            <div class="group-title support-title" id="supportTitle" aria-hidden="true">Support Alphabetizer</div>
+            <ul class="support-list" aria-labelledby="supportTitle">
+              <li>
+                <a class="support-item" data-amount="2" target="_blank" rel="noopener noreferrer" aria-describedby="supportNote">
+                  <span>$2<span class="sr-only">, opens Whop in a new tab</span></span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg>
+                </a>
+              </li>
+              <li>
+                <a class="support-item" data-amount="5" target="_blank" rel="noopener noreferrer" aria-describedby="supportNote">
+                  <span>$5<span class="sr-only">, opens Whop in a new tab</span></span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg>
+                </a>
+              </li>
+              <li>
+                <a class="support-item" data-amount="10" target="_blank" rel="noopener noreferrer" aria-describedby="supportNote">
+                  <span>$10<span class="sr-only">, opens Whop in a new tab</span></span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg>
+                </a>
+              </li>
+            </ul>
+            <p class="support-note" id="supportNote">One-time, via Whop. Everything stays free.</p>
+          </div>
+        </div>
       </div>
       <p class="counter" id="counter">0 characters &middot; 0 words &middot; 0 lines</p>
     </div>

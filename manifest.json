@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Alphabetizer",
-  "version": "2.2",
+  "version": "2.3",
   "description": "Sort text lines instantly with language-aware alphabetizing, dedupe, find and replace, and compare.",
   "icons": {
     "48": "icon48.png",
